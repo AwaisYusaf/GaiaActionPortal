@@ -77,28 +77,44 @@ The response must be valid JSON that can be parsed with JSON.parse().
     try {
       const apiKey = process.env.PERPLEXITY_API_KEY || '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';
       
+      const requestBody = {
+        model: 'sonar',  // Correct model name according to latest Perplexity API docs
+        messages: [
+          {
+            role: 'user',
+            content: rewritePrompt
+          }
+        ],
+        max_tokens: 2000
+      };
+      
+      console.log('Calling Perplexity Sonar API');
+      
+      // Create an AbortController with a timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await fetch('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify({
-          model: 'sonar',  // Correct model name according to latest Perplexity API docs
-          messages: [
-            {
-              role: 'user',
-              content: rewritePrompt
-            }
-          ],
-          max_tokens: 2000
-        })
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
       });
+      
+      // Clear the timeout
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Perplexity Sonar API error:', response.status, errorText);
-        return NextResponse.json({ error: 'Error from Perplexity Sonar API', message: errorText }, { status: response.status });
+        return NextResponse.json({ 
+          error: 'Error from Perplexity Sonar API', 
+          message: errorText, 
+          content 
+        }, { status: response.status });
       }
       
       const data = await response.json();
@@ -141,8 +157,7 @@ The response must be valid JSON that can be parsed with JSON.parse().
           // Return the original content if we can't parse the rewritten content
           return NextResponse.json({ 
             content, 
-            error: 'Failed to parse rewritten content as JSON', 
-            message: e instanceof Error ? e.message : 'Unknown error' 
+            error: 'Failed to parse rewritten content as JSON'
           });
         }
       } else {
@@ -154,17 +169,22 @@ The response must be valid JSON that can be parsed with JSON.parse().
       }
     } catch (error) {
       console.error('Error calling Perplexity Sonar API:', error);
+      
+      // Check if it's an AbortError (timeout)
+      const isTimeout = error.name === 'AbortError';
+      console.log(isTimeout ? 'Request timed out' : 'Error processing request');
+      
       return NextResponse.json({ 
-        content, 
-        error: 'Error calling Perplexity Sonar API', 
-        message: error instanceof Error ? error.message : 'Unknown error' 
+        content, // Return the original content which should be valid JSON
+        error: isTimeout ? 'Perplexity Sonar API request timed out' : 'Error calling Perplexity Sonar API'
       });
     }
   } catch (error) {
     console.error('Error in Gaia rewrite endpoint:', error);
+    // In case of a critical error, return a valid JSON response
     return NextResponse.json({ 
-      error: 'Internal server error in Gaia rewrite endpoint', 
-      message: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Internal server error in Gaia rewrite endpoint',
+      content: '{"title":"Error","summary":"An error occurred while processing your request.","details":"The system encountered an error while trying to process your request. Please try again.","actionableSteps":["Try your query again","If the problem persists, try a different query"]}'
     }, { status: 500 });
   }
 }
