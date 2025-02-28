@@ -16,25 +16,60 @@ const environmentalQuestions = [
 export default function Home() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim() || loading) return;
     
     setLoading(true);
+    setErrorMessage('');
     
-    // Store the query in search history
-    const searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-    searchHistory.push(query);
-    localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
-    
-    // Store the current query for the results page
-    localStorage.setItem('currentQuery', query);
-    localStorage.setItem('currentFollowUps', JSON.stringify([]));
-    
-    // Navigate to results page
-    router.push('/results');
+    try {
+      // First check if the query is about environmental topics using the cheaper Sonar model
+      const topicCheckResponse = await fetch('/api/perplexity/check-topic', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query }),
+      });
+      
+      if (!topicCheckResponse.ok) {
+        throw new Error('Failed to check topic');
+      }
+      
+      const topicData = await topicCheckResponse.json();
+      
+      if (topicData.isEnvironmentalTopic) {
+        // If it's environmental, proceed as normal
+        // Store the query in search history
+        const searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+        searchHistory.push(query);
+        localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+        
+        // Store the current query for the results page
+        localStorage.setItem('currentQuery', query);
+        localStorage.setItem('currentFollowUps', JSON.stringify([]));
+        
+        // Navigate to results page
+        router.push('/results');
+      } else {
+        // If not environmental, show error message
+        setErrorMessage('This app only answers questions around how people can take action to regenerate the planet :)');
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error checking topic:', error);
+      // If there's an error in the check, proceed to results page anyway (fail open)
+      const searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+      searchHistory.push(query);
+      localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+      localStorage.setItem('currentQuery', query);
+      localStorage.setItem('currentFollowUps', JSON.stringify([]));
+      router.push('/results');
+    }
   };
 
   return (
@@ -63,6 +98,12 @@ export default function Home() {
               </div>
             )}
           </div>
+          
+          {errorMessage && (
+            <div className="text-yellow-300 font-mono text-center p-4 border border-yellow-300 rounded">
+              {errorMessage}
+            </div>
+          )}
           
           <div className="flex justify-center">
             <button
