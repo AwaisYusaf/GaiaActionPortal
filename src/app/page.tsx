@@ -1,47 +1,79 @@
-import Link from "next/link";
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import TypingEffect from '@/components/TypingEffect';
+import { useRouter } from 'next/navigation';
+
+const environmentalQuestions = [
+  "How can we get plastic off of the beaches of Sian Ka'an in Mexico?",
+  "How we we reduce pollution in Boise, Idaho during January?",
+  "What steps can individuals take to improve humanity's impact on the planet?",
+  "I drive an Italka scooter. Is there anything I can do to it to minimize emmissions?",
+  "I want to organize a litter clean up day in Mexico City. Any tips on how to make this successful?"
+];
 
 export default function Home() {
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim() || loading) return;
+    
+    setLoading(true);
+    
+    // Store the query in search history
+    const searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+    searchHistory.push(query);
+    localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+    
+    // Store the current query for the results page
+    localStorage.setItem('currentQuery', query);
+    localStorage.setItem('currentFollowUps', JSON.stringify([]));
+    
+    // Navigate to results page
+    router.push('/results');
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-8">
-      <div>
-        <h2 className="text-2xl font-semibold text-center border p-4 font-mono rounded-md">
-          Get started by choosing a template path from the /paths/ folder.
-        </h2>
-      </div>
-      <div>
-        <h1 className="text-6xl font-bold text-center">Make anything you imagine 🪄</h1>
-        <h2 className="text-2xl text-center font-light text-gray-500 pt-4">
-          This whole page will be replaced when you run your template path.
-        </h2>
-      </div>
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">AI Chat App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            An intelligent conversational app powered by AI models, featuring real-time responses
-            and seamless integration with Next.js and various AI providers.
-          </p>
-        </div>
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">AI Image Generation App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            Create images from text prompts using AI, powered by the Replicate API and Next.js.
-          </p>
-        </div>
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">Social Media App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            A feature-rich social platform with user profiles, posts, and interactions using
-            Firebase and Next.js.
-          </p>
-        </div>
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">Voice Notes App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            A voice-based note-taking app with real-time transcription using Deepgram API, 
-            Firebase integration for storage, and a clean, simple interface built with Next.js.
-          </p>
-        </div>
+    <main className="min-h-screen bg-black text-[#00ff7f] p-8">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-xl md:text-4xl font-mono text-[#00ff7f] mb-4 text-center font-normal tracking-widest whitespace-nowrap">[ GAIA ACTION PORTAL ]</h1>
+        <h2 className="text-xl font-mono text-[#00ff7f] mb-12 text-center opacity-70">Take action with deep research</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="relative border border-[#00ff7f] rounded">
+            <textarea
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full p-4 bg-black text-[#00ff7f] font-mono rounded focus:outline-none focus:border-[#00aa55]"
+              rows={4}
+              placeholder=""
+            />
+            {!query && (
+              <div className="absolute top-4 left-4 pointer-events-none w-full pr-8">
+                <TypingEffect 
+                  questions={environmentalQuestions} 
+                  typingSpeed={80}
+                  pauseBetweenQuestions={2500}
+                  className="text-[#5affaa] font-mono opacity-60"
+                />
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-center">
+            <button
+              type="submit"
+              className="gaia-button text-lg px-8 py-2"
+              disabled={loading}
+            >
+              {loading ? 'Processing...' : 'Take action'}
+            </button>
+          </div>
+        </form>
       </div>
     </main>
   );

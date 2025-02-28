@@ -3,31 +3,75 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+  --foreground-rgb: 0, 255, 127;
+  --background-rgb: 0, 0, 0;
+  --accent-color: #00ff7f;
+  --secondary-color: #00aa55;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  background: rgb(var(--background-rgb));
+  font-family: monospace;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+.gaia-link {
+  color: var(--accent-color);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.gaia-link:hover {
+  color: var(--secondary-color);
+}
+
+.gaia-button {
+  background-color: transparent;
+  border: 1px solid var(--accent-color);
+  color: var(--accent-color);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: monospace;
+}
+
+.gaia-button:hover {
+  background-color: var(--accent-color);
+  color: black;
+}
+
+.gaia-input {
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--accent-color);
+  color: var(--accent-color);
+  padding: 0.5rem;
+  font-family: monospace;
+}
+
+.gaia-input:focus {
+  outline: none;
+  border-color: var(--secondary-color);
+}
+
+.typing-effect {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typing 3.5s steps(40, end);
+}
+
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+.separator {
+  border-top: 1px dashed var(--accent-color);
+  margin: 1rem 0;
 }

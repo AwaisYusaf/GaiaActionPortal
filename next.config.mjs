@@ -1,36 +1,30 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "placehold.co",
-        port: "",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "replicate.com",
-      },
-      {
-        protocol: "https",
-        hostname: "replicate.delivery",
-      },
-      {
-        protocol: "https",
-        hostname: "firebasestorage.googleapis.com",
+        protocol: 'https',
+        hostname: '**',
       },
     ],
     dangerouslyAllowSVG: true,
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    contentDispositionType: 'attachment',
+  },
+  experimental: {
+    serverComponentsExternalPackages: ['firebase-admin'],
   },
   async rewrites() {
     return [
       {
-        source: "/api/:path*",
-        destination: "https://api.openai.com/:path*",
+        source: '/api/:path*',
+        destination: '/api/:path*',
       },
     ];
+  },
+  // Set the server to run on port 3001
+  devServer: {
+    port: 3001,
   },
 };
 
