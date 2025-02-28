@@ -1,15 +1,129 @@
-# Ansh & Riley Full-Stack Template
+# Gaia Action Environmental Research Portal
 
-This is a full-stack template project for Software Composers to create  applications with AI.
+![Gaia Action Portal](https://i.imgur.com/8JXdBsL.png)
 
-## Getting started
-To create a new project, you go to `/paths`, choose from our list of Paths, and then use Cursor's Composer feature to quickly scaffold your project!
+## Overview
 
-You can also edit the Path's prompt template to be whatever you like!
+Gaia Action Portal is an AI-powered web application designed to help individuals and small groups explore and address environmental challenges through deep, actionable research. The portal leverages the Perplexity AI API to provide comprehensive, well-researched information on environmental topics with a focus on practical, individual-level actions.
 
-## Technologies used
-This doesn't really matter, but is useful for the AI to understand more about this project. We are using the following technologies
-- React with Next.js 14 App Router
-- TailwindCSS
-- Firebase Auth, Storage, and Database
-- Multiple AI endpoints including OpenAI, Anthropic, and Replicate using Vercel's AI SDK
+## Features
+
+- **AI-Powered Environmental Research**: Get deep insights on environmental topics using the Perplexity AI API
+- **Action-Oriented Results**: Focus on what individuals and small groups can do to make a positive impact
+- **Mobile-Responsive Design**: Optimized for both desktop and mobile devices
+- **Search History**: Track and revisit previous research queries
+- **Resource Links**: Direct access to recommended resources for further learning and action
+- **Copy Functionality**: Easily copy research results for sharing or reference
+
+## Technology Stack
+
+- **Frontend**: React with Next.js 14 (App Router)
+- **Styling**: Tailwind CSS with custom terminal-inspired theme
+- **API Integration**: Perplexity AI API for deep research capabilities
+- **State Management**: React hooks for local state management
+- **Deployment**: GitHub for version control
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18.0.0 or later
+- npm or yarn
+- Perplexity API key
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/vanhalenrules420/GaiaActionPortal.git
+   cd GaiaActionPortal
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+3. Create a `.env.local` file in the root directory and add your Perplexity API key:
+   ```
+   PERPLEXITY_API_KEY=your_api_key_here
+   ```
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+## Usage
+
+1. Enter an environmental question or topic in the search field
+2. Click "Take action" to submit your query
+3. Wait for the AI to research and provide results (this may take a minute)
+4. Review the structured results including:
+   - Title and summary
+   - Detailed information
+   - Actionable steps you can take
+   - Resources with links for further learning
+5. Use the "Copy" button to copy the results or "New Search" to start a new query
+6. Access your search history to revisit previous queries
+
+## Project Structure
+
+```
+/src
+  /app                  # Next.js app router files
+    /api                # API routes
+      /perplexity       # Perplexity API integration
+    /results            # Results page
+    page.tsx            # Home page
+    globals.css         # Global styles
+  /components           # Reusable components
+    AnimatedEllipsis.tsx  # Loading animation
+    SearchHistory.tsx     # Search history component
+    TypingEffect.tsx      # Typing effect for search examples
+```
+
+## Key Features Implementation
+
+### Perplexity API Integration
+
+The application uses the Perplexity API with the `sonar-deep-research` model to provide comprehensive environmental research. The API integration includes:
+
+- Custom system prompts to focus on individual actions
+- Robust JSON parsing for consistent results
+- Error handling for various response formats
+- Support for resource links
+
+### Mobile Responsiveness
+
+The UI is optimized for mobile devices with:
+
+- Responsive typography that adjusts based on screen size
+- Collapsible search history on mobile devices
+- Touch-friendly buttons and inputs
+- No horizontal scrolling on small screens
+
+### Loading State
+
+- Custom animated ellipsis component for visual feedback during API calls
+- Clear messaging about the research process
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Perplexity AI for providing the research API
+- Next.js team for the excellent React framework
+- All contributors to open-source packages used in this project
