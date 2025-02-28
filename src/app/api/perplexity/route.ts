@@ -90,16 +90,19 @@ CRITICAL INSTRUCTIONS:
       // Try to parse the content as JSON
       try {
         const content = data.choices[0].message.content;
+        console.log('Raw content length:', content.length);
         
         // Remove any thinking sections if they exist
         let cleanedContent = content;
         if (content.includes('<think>') && content.includes('</think>')) {
           cleanedContent = content.replace(/<think>[\s\S]*?<\/think>/g, '');
+          console.log('Content after removing thinking sections:', cleanedContent.substring(0, 100) + '...');
         }
         
         // Remove markdown code blocks if they exist
         if (cleanedContent.includes('```json')) {
           cleanedContent = cleanedContent.replace(/```json\n|\n```/g, '');
+          console.log('Content after removing code blocks:', cleanedContent.substring(0, 100) + '...');
         }
         
         // Remove any other non-JSON text
@@ -108,22 +111,67 @@ CRITICAL INSTRUCTIONS:
         
         if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
           cleanedContent = cleanedContent.substring(jsonStartIndex, jsonEndIndex);
+          console.log('Extracted JSON content length:', cleanedContent.length);
         }
         
         cleanedContent = cleanedContent.trim();
         
-        const parsedContent = JSON.parse(cleanedContent);
-        
-        // Replace the content with the parsed JSON
-        data.choices[0].message.parsedContent = parsedContent;
-        
-        // Also replace the original content with the cleaned content
-        data.choices[0].message.content = cleanedContent;
+        // Try multiple parsing approaches
+        try {
+          // First try direct parsing
+          const parsedContent = JSON.parse(cleanedContent);
+          console.log('Successfully parsed JSON');
+          
+          // Replace the content with the parsed JSON
+          data.choices[0].message.parsedContent = parsedContent;
+          
+          // Also replace the original content with the cleaned content
+          data.choices[0].message.content = cleanedContent;
+        } catch (parseError) {
+          console.error('Initial JSON parse failed:', parseError);
+          
+          // If that fails, try a more aggressive approach to find valid JSON
+          const possibleJsonMatch = cleanedContent.match(/{[\s\S]*}/);
+          if (possibleJsonMatch && possibleJsonMatch[0]) {
+            try {
+              const extractedJson = possibleJsonMatch[0];
+              console.log('Attempting to parse extracted JSON length:', extractedJson.length);
+              const parsedJson = JSON.parse(extractedJson);
+              console.log('Successfully parsed extracted JSON');
+              
+              // Replace the content with the parsed JSON
+              data.choices[0].message.parsedContent = parsedJson;
+              
+              // Also replace the original content with the cleaned content
+              data.choices[0].message.content = extractedJson;
+            } catch (e) {
+              console.error('Failed to parse extracted JSON:', e);
+              return NextResponse.json(
+                { error: 'Failed to parse the response from the API', message: 'The API returned invalid JSON' },
+                { status: 500 }
+              );
+            }
+          } else {
+            console.error('No JSON-like structure found in the response');
+            return NextResponse.json(
+              { error: 'Failed to parse the response from the API', message: 'The API response did not contain valid JSON' },
+              { status: 500 }
+            );
+          }
+        }
       } catch (e) {
-        console.error('Failed to parse response content as JSON:', e);
+        console.error('Failed to process API response:', e);
+        return NextResponse.json(
+          { error: 'Failed to process the API response', message: e instanceof Error ? e.message : 'Unknown error' },
+          { status: 500 }
+        );
       }
     } else {
       console.error('Unexpected API response structure:', data);
+      return NextResponse.json(
+        { error: 'Unexpected API response structure', message: 'The API response did not contain the expected data structure' },
+        { status: 500 }
+      );
     }
     
     return NextResponse.json(data);

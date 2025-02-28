@@ -33,14 +33,19 @@ Your task is to determine if the user's question is related to any of the follow
 - Green living
 - Eco-friendly practices
 
-Respond with a JSON object with a single field "isEnvironmentalTopic" that is true if the query is related to any of these topics, and false otherwise.
+Respond with ONLY a JSON object with a single field "isEnvironmentalTopic" that is true if the query is related to any of these topics, and false otherwise.
 
 Example response:
 {
   "isEnvironmentalTopic": true
 }
 
-Do not include any explanation or additional text in your response. Only return the JSON object.`
+CRITICAL INSTRUCTIONS:
+1. DO NOT include any thinking, reasoning, or planning sections in your response
+2. DO NOT include any <think> tags or similar markers
+3. DO NOT include any text outside of the JSON object
+4. Your entire response must be a valid JSON object that can be parsed with JSON.parse()
+5. DO NOT include markdown code blocks or any other formatting - just the raw JSON object`
         },
         {
           role: 'user',
@@ -79,13 +84,19 @@ Do not include any explanation or additional text in your response. Only return 
     if (data.choices && data.choices[0] && data.choices[0].message) {
       try {
         const content = data.choices[0].message.content;
+        console.log('Raw content from API:', content);
         
-        // Clean up the content to extract JSON
+        // Remove thinking sections if they exist
         let cleanedContent = content;
+        if (content.includes('<think>') && content.includes('</think>')) {
+          cleanedContent = content.replace(/<think>[\s\S]*?<\/think>/g, '');
+          console.log('Content after removing thinking sections:', cleanedContent);
+        }
         
         // Remove markdown code blocks if they exist
         if (cleanedContent.includes('```json')) {
           cleanedContent = cleanedContent.replace(/```json\n|\n```/g, '');
+          console.log('Content after removing code blocks:', cleanedContent);
         }
         
         // Extract JSON object if it's embedded in text
@@ -94,21 +105,54 @@ Do not include any explanation or additional text in your response. Only return 
         
         if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
           cleanedContent = cleanedContent.substring(jsonStartIndex, jsonEndIndex);
+          console.log('Extracted JSON content:', cleanedContent);
         }
         
         cleanedContent = cleanedContent.trim();
         
-        // Parse the JSON to get the classification
-        const parsedContent = JSON.parse(cleanedContent);
-        isEnvironmentalTopic = parsedContent.isEnvironmentalTopic === true;
-        
+        // Try multiple parsing approaches
+        try {
+          // First try direct parsing
+          const parsedContent = JSON.parse(cleanedContent);
+          isEnvironmentalTopic = parsedContent.isEnvironmentalTopic === true;
+          console.log('Successfully parsed JSON, isEnvironmentalTopic:', isEnvironmentalTopic);
+        } catch (parseError) {
+          console.error('Initial JSON parse failed:', parseError);
+          
+          // If that fails, try a more aggressive approach to find valid JSON
+          const possibleJsonMatch = cleanedContent.match(/{[\s\S]*?}/);
+          if (possibleJsonMatch && possibleJsonMatch[0]) {
+            try {
+              const extractedJson = possibleJsonMatch[0];
+              console.log('Attempting to parse extracted JSON:', extractedJson);
+              const parsedJson = JSON.parse(extractedJson);
+              isEnvironmentalTopic = parsedJson.isEnvironmentalTopic === true;
+              console.log('Successfully parsed extracted JSON, isEnvironmentalTopic:', isEnvironmentalTopic);
+            } catch (e) {
+              console.error('Failed to parse extracted JSON:', e);
+              // As a fallback, check if the content contains "true" related to environmental topics
+              isEnvironmentalTopic = cleanedContent.toLowerCase().includes('"isenvironmentaltopic": true') || 
+                                    cleanedContent.toLowerCase().includes('"isenvironmentaltopic":true');
+              console.log('Using string matching fallback, isEnvironmentalTopic:', isEnvironmentalTopic);
+            }
+          } else {
+            // If no JSON-like structure found, default to true to be safe
+            console.log('No JSON-like structure found, defaulting to true');
+            isEnvironmentalTopic = true;
+          }
+        }
       } catch (e) {
-        console.error('Failed to parse topic check response:', e);
+        console.error('Failed to process topic check response:', e);
         // Default to true if parsing fails, to err on the side of caution
         isEnvironmentalTopic = true;
       }
+    } else {
+      console.error('Unexpected API response structure:', data);
+      // Default to true if response structure is unexpected
+      isEnvironmentalTopic = true;
     }
     
+    console.log('Final determination - isEnvironmentalTopic:', isEnvironmentalTopic);
     return NextResponse.json({ isEnvironmentalTopic });
   } catch (error) {
     console.error('Error processing topic check request:', error);
