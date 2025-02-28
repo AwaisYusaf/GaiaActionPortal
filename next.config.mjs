@@ -22,10 +22,6 @@ const nextConfig = {
       },
     ];
   },
-  // Set the server to run on port 3001
-  devServer: {
-    port: 3001,
-  },
 };
 
 export default nextConfig;

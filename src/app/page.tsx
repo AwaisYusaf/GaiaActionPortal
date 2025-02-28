@@ -76,7 +76,7 @@ export default function Home() {
     <main className="min-h-screen bg-black text-[#00ff7f] p-8">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-xl md:text-4xl font-mono text-[#00ff7f] mb-4 text-center font-normal tracking-widest whitespace-nowrap">[ GAIA ACTION PORTAL ]</h1>
-        <h2 className="text-xl font-mono text-[#00ff7f] mb-12 text-center opacity-70">Take action with deep research</h2>
+        <h2 className="text-sm md:text-xl font-mono text-[#00ff7f] mb-12 text-center opacity-70 px-4 max-w-2xl mx-auto leading-relaxed">Use Deep Research to understand environmental problems, as well as actions you can take to fix them.</h2>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="relative border border-[#00ff7f] rounded">
@@ -85,7 +85,12 @@ export default function Home() {
               onChange={(e) => setQuery(e.target.value)}
               className="w-full p-4 bg-black text-[#00ff7f] font-mono rounded focus:outline-none focus:border-[#00aa55]"
               rows={4}
-              placeholder=""
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e as unknown as React.FormEvent);
+                }
+              }}
             />
             {!query && (
               <div className="absolute top-4 left-4 pointer-events-none w-full pr-8">

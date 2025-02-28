@@ -159,6 +159,56 @@ CRITICAL INSTRUCTIONS:
             );
           }
         }
+        
+        // Now that we have valid JSON content, send it to the Gaia rewrite endpoint
+        try {
+          console.log('Sending content to Gaia rewrite endpoint');
+          
+          // Use the full URL for the API endpoint
+          const host = req.headers.get('host') || 'localhost:3006';
+          const protocol = host.includes('localhost') ? 'http' : 'https';
+          const rewriteUrl = `${protocol}://${host}/api/perplexity/gaia-rewrite`;
+          
+          console.log(`Using rewrite URL: ${rewriteUrl}`);
+          
+          const rewriteResponse = await fetch(rewriteUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              content: data.choices[0].message.content
+            })
+          });
+          
+          if (rewriteResponse.ok) {
+            const rewriteData = await rewriteResponse.json();
+            
+            if (rewriteData.content) {
+              console.log('Successfully received rewritten content');
+              
+              try {
+                // Parse the rewritten content
+                const rewrittenParsedContent = JSON.parse(rewriteData.content);
+                
+                // Update the response with the rewritten content
+                data.choices[0].message.content = rewriteData.content;
+                data.choices[0].message.parsedContent = rewrittenParsedContent;
+                
+                console.log('Updated response with rewritten content');
+              } catch (parseError) {
+                console.error('Error parsing rewritten content:', parseError);
+                // Keep the original content if there's an error parsing the rewritten content
+              }
+            }
+          } else {
+            console.error('Error from Gaia rewrite endpoint:', rewriteResponse.status);
+            // Continue with the original content if there's an error from the rewrite endpoint
+          }
+        } catch (rewriteError) {
+          console.error('Error calling Gaia rewrite endpoint:', rewriteError);
+          // Continue with the original content if there's an error calling the rewrite endpoint
+        }
       } catch (e) {
         console.error('Failed to process API response:', e);
         return NextResponse.json(
