@@ -4,7 +4,14 @@ import fetch from 'node-fetch';
 async function testPerplexityAPI() {
   console.log('Testing Perplexity API...');
   
-  const apiKey = process.env.PERPLEXITY_API_KEY || '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';
+  // Use environment variable for API key - DO NOT hardcode in production
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  
+  if (!apiKey) {
+    console.error('Error: PERPLEXITY_API_KEY environment variable is not set');
+    console.log('Please set the PERPLEXITY_API_KEY environment variable and try again');
+    return;
+  }
   
   const requestBody = {
     model: 'sonar',  // Updated to use a valid model

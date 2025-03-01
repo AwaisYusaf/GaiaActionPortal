@@ -1,11 +1,18 @@
 // Test script for our Perplexity API route
 import fetch from 'node-fetch';
 
-// Set environment variable for testing
-process.env.PERPLEXITY_API_KEY = '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';
+// DO NOT set API keys in code - use environment variables
+// process.env.PERPLEXITY_API_KEY should be set before running this script
 
 async function testPerplexityAPIRoute() {
   console.log('Testing our Perplexity API route...');
+  
+  // Check if API key is set
+  if (!process.env.PERPLEXITY_API_KEY) {
+    console.error('Error: PERPLEXITY_API_KEY environment variable is not set');
+    console.log('Please set the PERPLEXITY_API_KEY environment variable and try again');
+    return;
+  }
   
   const query = "How can I reduce plastic waste in my daily life?";
   
