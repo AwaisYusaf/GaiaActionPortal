@@ -25,6 +25,18 @@
   node_bundler = "esbuild"
   timeout = 120
 
+[functions."api/perplexity/check-topic"]
+  included_files = []
+  external_node_modules = []
+  node_bundler = "esbuild"
+  timeout = 30
+
+[functions."api/test-key"]
+  included_files = []
+  external_node_modules = []
+  node_bundler = "esbuild"
+  timeout = 30
+
 # Add headers to enable CORS
 [[headers]]
   for = "/api/*"

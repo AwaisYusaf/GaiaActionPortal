@@ -18,13 +18,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing query parameter' }, { status: 400 });
     }
     
-    // Use environment variable for API key with fallback
+    // Use environment variable for API key
     const apiKey = process.env.PERPLEXITY_API_KEY;
     
     if (!apiKey) {
       console.error('No Perplexity API key found in environment variables');
-      return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'API key not configured',
+        details: 'The PERPLEXITY_API_KEY environment variable is not set in the server environment.'
+      }, { status: 500 });
     }
+    
+    // Log masked API key for debugging
+    const maskedKey = apiKey.substring(0, 4) + '...' + apiKey.substring(apiKey.length - 4);
+    console.log(`Using API key: ${maskedKey} (length: ${apiKey.length})`);
     
     // Construct the prompt with follow-up questions if available
     let fullQuery = query;
@@ -69,297 +76,330 @@ CRITICAL INSTRUCTIONS:
       max_tokens: 2000
     };
     
-    console.log('Request body:', JSON.stringify(requestBody));
+    console.log('Request body prepared');
     
     // Create an AbortController for the fetch request
     const controller = new AbortController();
     // Set a timeout of 90 seconds (increased from 60 seconds)
     const timeoutId = setTimeout(() => controller.abort(), 90000);
     
-    try {
-      // Call the Perplexity API
-      const response = await fetch('https://api.perplexity.ai/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal
-      });
-      
-      // Clear the timeout
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Perplexity API error:', response.status, errorText);
+    // Implement retry logic
+    const maxRetries = 3;
+    let retryCount = 0;
+    let lastError = null;
+    
+    while (retryCount < maxRetries) {
+      try {
+        console.log(`API request attempt ${retryCount + 1} of ${maxRetries}`);
         
-        // Return a structured error response with a fallback JSON
-        return NextResponse.json({ 
-          error: `Perplexity API error: ${response.status}`,
-          choices: [{
-            message: {
-              content: JSON.stringify({
-                title: "Error Connecting to Research Service",
-                summary: "We encountered an issue while trying to research your query.",
-                details: "The research service is currently unavailable. This could be due to high demand or temporary service disruption.",
-                actionableSteps: [
-                  "Try again in a few minutes",
-                  "Refresh the page and submit your query again",
-                  "Try a different, more specific query"
-                ],
-                resources: []
-              }),
-              parsedContent: {
-                title: "Error Connecting to Research Service",
-                summary: "We encountered an issue while trying to research your query.",
-                details: "The research service is currently unavailable. This could be due to high demand or temporary service disruption.",
-                actionableSteps: [
-                  "Try again in a few minutes",
-                  "Refresh the page and submit your query again",
-                  "Try a different, more specific query"
-                ],
-                resources: []
-              }
-            }
-          }]
-        }, { status: 500 });
-      }
-
-      const data = await response.json();
-      console.log('Raw API response:', JSON.stringify(data, null, 2));
-      
-      // Check if the response contains the expected structure
-      if (data.choices && data.choices[0] && data.choices[0].message) {
-        console.log('Message content:', data.choices[0].message.content);
+        // Call the Perplexity API
+        const response = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        });
         
-        // Try to parse the content as JSON
-        try {
-          const content = data.choices[0].message.content;
-          console.log('Raw content length:', content.length);
+        // Clear the timeout
+        clearTimeout(timeoutId);
+        
+        console.log('Perplexity API response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Perplexity API error:', response.status, errorText);
           
-          // Remove any thinking sections if they exist
-          let cleanedContent = content;
-          if (content.includes('<think>') && content.includes('</think>')) {
-            cleanedContent = content.replace(/<think>[\s\S]*?<\/think>/g, '');
-            console.log('Content after removing thinking sections:', cleanedContent.substring(0, 100) + '...');
-          }
-          
-          // Remove markdown code blocks if they exist
-          if (cleanedContent.includes('```json')) {
-            cleanedContent = cleanedContent.replace(/```json\n|\n```/g, '');
-            console.log('Content after removing code blocks:', cleanedContent.substring(0, 100) + '...');
-          }
-          
-          // Remove any other non-JSON text
-          const jsonStartIndex = cleanedContent.indexOf('{');
-          const jsonEndIndex = cleanedContent.lastIndexOf('}') + 1;
-          
-          if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-            cleanedContent = cleanedContent.substring(jsonStartIndex, jsonEndIndex);
-            console.log('Extracted JSON content length:', cleanedContent.length);
-          }
-          
-          cleanedContent = cleanedContent.trim();
-          
-          // Try multiple parsing approaches
-          try {
-            // First try direct parsing
-            const parsedContent = JSON.parse(cleanedContent);
-            console.log('Successfully parsed JSON');
-            
-            // Replace the content with the parsed JSON
-            data.choices[0].message.parsedContent = parsedContent;
-            
-            // Also replace the original content with the cleaned content
-            data.choices[0].message.content = cleanedContent;
-          } catch (parseError) {
-            console.error('Initial JSON parse failed:', parseError);
-            
-            // If that fails, try a more aggressive approach to find valid JSON
-            const possibleJsonMatch = cleanedContent.match(/{[\s\S]*}/);
-            if (possibleJsonMatch && possibleJsonMatch[0]) {
-              try {
-                const extractedJson = possibleJsonMatch[0];
-                console.log('Attempting to parse extracted JSON length:', extractedJson.length);
-                const parsedJson = JSON.parse(extractedJson);
-                console.log('Successfully parsed extracted JSON');
-                
-                // Replace the content with the parsed JSON
-                data.choices[0].message.parsedContent = parsedJson;
-                
-                // Also replace the original content with the cleaned content
-                data.choices[0].message.content = extractedJson;
-              } catch (e) {
-                console.error('Failed to parse extracted JSON:', e);
-                return NextResponse.json(
-                  { error: 'Failed to parse the response from the API', message: 'The API returned invalid JSON' },
-                  { status: 500 }
-                );
-              }
-            } else {
-              console.error('No JSON-like structure found in the response');
-              return NextResponse.json(
-                { error: 'Failed to parse the response from the API', message: 'The API response did not contain valid JSON' },
-                { status: 500 }
-              );
-            }
-          }
-          
-          // Now that we have valid JSON content, send it to the Gaia rewrite endpoint
-          try {
-            console.log('Sending content to Gaia rewrite endpoint');
-            
-            // Use the full URL for the API endpoint
-            const host = req.headers.get('host') || 'localhost:3000';
-            const protocol = host.includes('localhost') ? 'http' : 'https';
-            const rewriteUrl = `/api/perplexity/gaia-rewrite`;
-            
-            console.log(`Using rewrite URL: ${rewriteUrl}`);
-            
-            // Create an AbortController with a timeout for the rewrite request
-            const rewriteController = new AbortController();
-            const rewriteTimeoutId = setTimeout(() => rewriteController.abort(), 45000); // 45 second timeout
-            
-            // Get the parsed content from the data structure
-            const parsedContent = data.choices[0].message.parsedContent || data.choices[0].message.content;
-            
-            const rewriteResponse = await fetch(rewriteUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ content: JSON.stringify(parsedContent) }),
-              signal: rewriteController.signal
-            });
-            
-            // Clear the timeout
-            clearTimeout(rewriteTimeoutId);
-            
-            if (rewriteResponse.ok) {
-              const rewriteData = await rewriteResponse.json();
-              
-              if (rewriteData.content) {
-                console.log('Successfully received rewritten content');
-                
-                try {
-                  // Parse the rewritten content
-                  const rewrittenParsedContent = JSON.parse(rewriteData.content);
-                  
-                  // Update the response with the rewritten content
-                  data.choices[0].message.content = rewriteData.content;
-                  data.choices[0].message.parsedContent = rewrittenParsedContent;
-                  
-                  console.log('Updated response with rewritten content');
-                } catch (parseError) {
-                  console.error('Error parsing rewritten content:', parseError);
-                  // Keep the original content if there's an error parsing the rewritten content
-                }
-              }
-            } else {
-              console.error('Error from Gaia rewrite endpoint:', rewriteResponse.status);
-              // Continue with the original content if there's an error from the rewrite endpoint
-              try {
-                const errorData = await rewriteResponse.json();
-                console.log('Error data from rewrite endpoint:', errorData);
-                
-                // If the rewrite endpoint returned content despite the error, use it
-                if (errorData.content) {
-                  try {
-                    const parsedErrorContent = JSON.parse(errorData.content);
-                    data.choices[0].message.parsedContent = parsedErrorContent;
-                    data.choices[0].message.content = errorData.content;
-                    console.log('Using content from error response');
-                  } catch (e) {
-                    console.error('Error parsing content from error response:', e);
-                    // Keep original content
+          // If we get a 401 Unauthorized error, don't retry as it's likely an API key issue
+          if (response.status === 401) {
+            console.error('API key authentication failed. Please check your API key.');
+            return NextResponse.json({ 
+              error: 'API key authentication failed',
+              errorDetails: 'The Perplexity API key was rejected. Please check that your API key is valid and has not expired.',
+              choices: [{
+                message: {
+                  content: JSON.stringify({
+                    title: "API Authentication Error",
+                    summary: "We encountered an authentication issue while trying to research your query.",
+                    details: "The API key used to access the research service is invalid or has expired. This requires administrative attention.",
+                    actionableSteps: [
+                      "Try again later after the API key has been updated",
+                      "Contact the site administrator about this issue"
+                    ],
+                    resources: []
+                  }),
+                  parsedContent: {
+                    title: "API Authentication Error",
+                    summary: "We encountered an authentication issue while trying to research your query.",
+                    details: "The API key used to access the research service is invalid or has expired. This requires administrative attention.",
+                    actionableSteps: [
+                      "Try again later after the API key has been updated",
+                      "Contact the site administrator about this issue"
+                    ],
+                    resources: []
                   }
                 }
-              } catch (e) {
-                console.error('Error parsing error response from rewrite endpoint:', e);
-                // Keep original content
+              }]
+            }, { status: 500 });
+          }
+          
+          // For network-related errors, retry
+          if (response.status >= 500 || response.status === 429) {
+            lastError = new Error(`API error: ${response.status} ${errorText}`);
+            retryCount++;
+            if (retryCount < maxRetries) {
+              console.log(`Retrying in ${retryCount * 2} seconds...`);
+              await new Promise(resolve => setTimeout(resolve, retryCount * 2000));
+              continue;
+            }
+          }
+          
+          // Return a structured error response with a fallback JSON
+          return NextResponse.json({ 
+            error: `Perplexity API error: ${response.status}`,
+            errorDetails: errorText.substring(0, 500),
+            choices: [{
+              message: {
+                content: JSON.stringify({
+                  title: "Error Connecting to Research Service",
+                  summary: "We encountered an issue while trying to research your query.",
+                  details: "The research service is currently unavailable. This could be due to high demand or temporary service disruption.",
+                  actionableSteps: [
+                    "Try again in a few minutes",
+                    "Refresh the page and submit your query again",
+                    "Try a different, more specific query"
+                  ],
+                  resources: []
+                }),
+                parsedContent: {
+                  title: "Error Connecting to Research Service",
+                  summary: "We encountered an issue while trying to research your query.",
+                  details: "The research service is currently unavailable. This could be due to high demand or temporary service disruption.",
+                  actionableSteps: [
+                    "Try again in a few minutes",
+                    "Refresh the page and submit your query again",
+                    "Try a different, more specific query"
+                  ],
+                  resources: []
+                }
+              }
+            }]
+          }, { status: 500 });
+        }
+
+        console.log('Parsing Perplexity API response');
+        const data = await response.json();
+        console.log('Successfully parsed API response');
+        
+        // Check if the response contains the expected structure
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+          console.log('Response has expected structure');
+          
+          // Try to parse the content as JSON
+          try {
+            const content = data.choices[0].message.content;
+            console.log('Raw content length:', content.length);
+            
+            // Remove any thinking sections if they exist
+            let cleanedContent = content;
+            if (content.includes('<think>') && content.includes('</think>')) {
+              cleanedContent = content.replace(/<think>[\s\S]*?<\/think>/g, '');
+              console.log('Content after removing thinking sections:', cleanedContent.substring(0, 100) + '...');
+            }
+            
+            // Remove markdown code blocks if they exist
+            if (cleanedContent.includes('```json')) {
+              cleanedContent = cleanedContent.replace(/```json\n|\n```/g, '');
+              console.log('Content after removing markdown code blocks:', cleanedContent.substring(0, 100) + '...');
+            }
+            
+            // Try to parse the JSON
+            let parsedContent;
+            try {
+              parsedContent = JSON.parse(cleanedContent);
+              console.log('Successfully parsed content as JSON');
+            } catch (jsonError) {
+              console.error('Error parsing content as JSON:', jsonError);
+              
+              // Try to extract JSON from the content using regex
+              const jsonMatch = cleanedContent.match(/(\{[\s\S]*\})/);
+              if (jsonMatch && jsonMatch[1]) {
+                try {
+                  parsedContent = JSON.parse(jsonMatch[1]);
+                  console.log('Successfully extracted and parsed JSON using regex');
+                } catch (extractError) {
+                  console.error('Error parsing extracted JSON:', extractError);
+                  throw new Error('Failed to parse content as JSON');
+                }
+              } else {
+                throw new Error('No valid JSON found in content');
               }
             }
-          } catch (rewriteError) {
-            console.error('Error calling Gaia rewrite endpoint:', rewriteError);
-            // Continue with the original content if there's an error calling the rewrite endpoint
+            
+            // Add the parsed content to the response
+            data.choices[0].message.parsedContent = parsedContent;
+            
+            console.log('Returning successful response with parsed content');
+            return NextResponse.json(data);
+          } catch (parseError) {
+            console.error('Error processing content:', parseError);
+            
+            // Return the raw response if we can't parse it
+            console.log('Returning raw response without parsed content');
+            return NextResponse.json(data);
           }
-        } catch (e) {
-          console.error('Failed to process API response:', e);
-          return NextResponse.json(
-            { error: 'Failed to process the API response', message: e instanceof Error ? e.message : 'Unknown error' },
-            { status: 500 }
-          );
+        } else {
+          console.error('Unexpected API response structure:', JSON.stringify(data).substring(0, 500));
+          
+          // Return a structured error response
+          return NextResponse.json({ 
+            error: 'Unexpected API response structure',
+            data: data,
+            choices: [{
+              message: {
+                content: JSON.stringify({
+                  title: "Unexpected Response Format",
+                  summary: "We received an unexpected response format from the research service.",
+                  details: "The research service returned data in a format that we couldn't process. This is likely a temporary issue.",
+                  actionableSteps: [
+                    "Try again in a few minutes",
+                    "Refresh the page and submit your query again",
+                    "Try a different, more specific query"
+                  ],
+                  resources: []
+                }),
+                parsedContent: {
+                  title: "Unexpected Response Format",
+                  summary: "We received an unexpected response format from the research service.",
+                  details: "The research service returned data in a format that we couldn't process. This is likely a temporary issue.",
+                  actionableSteps: [
+                    "Try again in a few minutes",
+                    "Refresh the page and submit your query again",
+                    "Try a different, more specific query"
+                  ],
+                  resources: []
+                }
+              }
+            }]
+          }, { status: 500 });
         }
-      } else {
-        console.error('Unexpected API response structure:', data);
-        return NextResponse.json(
-          { error: 'Unexpected API response structure', message: 'The API response did not contain the expected data structure' },
-          { status: 500 }
-        );
+      } catch (error) {
+        console.error('Error during API request:', error);
+        
+        // Store the error for potential retry
+        lastError = error;
+        
+        // If it's an abort error (timeout), don't retry
+        if (error.name === 'AbortError') {
+          console.error('Request timed out');
+          clearTimeout(timeoutId);
+          
+          return NextResponse.json({ 
+            error: 'Request timed out',
+            errorDetails: 'The request to the Perplexity API timed out after 90 seconds.',
+            choices: [{
+              message: {
+                content: JSON.stringify({
+                  title: "Research Request Timed Out",
+                  summary: "Your research query took too long to process and timed out.",
+                  details: "This can happen with complex queries or during periods of high demand. The research service was unable to complete your request within the allocated time.",
+                  actionableSteps: [
+                    "Try a simpler, more focused query",
+                    "Break your question into smaller, more specific questions",
+                    "Try again during a less busy time"
+                  ],
+                  resources: []
+                }),
+                parsedContent: {
+                  title: "Research Request Timed Out",
+                  summary: "Your research query took too long to process and timed out.",
+                  details: "This can happen with complex queries or during periods of high demand. The research service was unable to complete your request within the allocated time.",
+                  actionableSteps: [
+                    "Try a simpler, more focused query",
+                    "Break your question into smaller, more specific questions",
+                    "Try again during a less busy time"
+                  ],
+                  resources: []
+                }
+              }
+            }]
+          }, { status: 504 });
+        }
+        
+        // For network-related errors, retry
+        retryCount++;
+        if (retryCount < maxRetries) {
+          console.log(`Retrying in ${retryCount * 2} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, retryCount * 2000));
+          continue;
+        }
       }
-      
-      return NextResponse.json(data);
-    } catch (error: unknown) {
-      console.error('Error in Perplexity API route:', error);
-      
-      // Ensure we always return a valid JSON response
-      return NextResponse.json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'An unknown error occurred while processing your request',
-        choices: [{
-          message: {
-            content: JSON.stringify({
-              title: "Error Processing Research Request",
-              summary: "We encountered an issue while processing your request.",
-              details: "An unexpected error occurred while processing your request. Our team has been notified.",
-              actionableSteps: [
-                "Try again with a more specific query",
-                "Try again later when the service might be less busy"
-              ],
-              resources: []
-            }),
-            parsedContent: {
-              title: "Error Processing Research Request",
-              summary: "We encountered an issue while processing your request.",
-              details: "An unexpected error occurred while processing your request. Our team has been notified.",
-              actionableSteps: [
-                "Try again with a more specific query",
-                "Try again later when the service might be less busy"
-              ],
-              resources: []
-            }
-          }
-        }]
-      }, { status: 500 });
     }
-  } catch (error: unknown) {
-    console.error('Error processing request:', error);
     
-    // Ensure we always return a valid JSON response
+    // If we've exhausted all retries, return an error
+    console.error('All retry attempts failed');
     return NextResponse.json({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'An unknown error occurred while processing your request',
+      error: 'All API request attempts failed',
+      errorDetails: lastError ? lastError.message : 'Unknown error',
       choices: [{
         message: {
           content: JSON.stringify({
-            title: "Error Processing Research Request",
-            summary: "We encountered an issue while processing your request.",
-            details: "An unexpected error occurred while processing your request. Our team has been notified.",
+            title: "Unable to Complete Research",
+            summary: "We were unable to complete your research query after multiple attempts.",
+            details: "The research service is experiencing persistent issues. This could be due to network problems, service outages, or high demand.",
             actionableSteps: [
-              "Try again with a more specific query",
-              "Try again later when the service might be less busy"
+              "Try again later when the service may be less busy",
+              "Check your internet connection",
+              "Try a different, simpler query"
             ],
             resources: []
           }),
           parsedContent: {
-            title: "Error Processing Research Request",
-            summary: "We encountered an issue while processing your request.",
-            details: "An unexpected error occurred while processing your request. Our team has been notified.",
+            title: "Unable to Complete Research",
+            summary: "We were unable to complete your research query after multiple attempts.",
+            details: "The research service is experiencing persistent issues. This could be due to network problems, service outages, or high demand.",
             actionableSteps: [
-              "Try again with a more specific query",
-              "Try again later when the service might be less busy"
+              "Try again later when the service may be less busy",
+              "Check your internet connection",
+              "Try a different, simpler query"
+            ],
+            resources: []
+          }
+        }
+      }]
+    }, { status: 500 });
+    
+  } catch (error) {
+    console.error('Unhandled error in Perplexity API route:', error);
+    
+    // Return a generic error response
+    return NextResponse.json({ 
+      error: 'An unexpected error occurred',
+      errorDetails: error instanceof Error ? error.message : 'Unknown error',
+      choices: [{
+        message: {
+          content: JSON.stringify({
+            title: "Unexpected Error",
+            summary: "An unexpected error occurred while processing your research query.",
+            details: "Our system encountered an error that it wasn't expecting. This has been logged for investigation.",
+            actionableSteps: [
+              "Try again later",
+              "Refresh the page and submit your query again",
+              "If the problem persists, please contact support"
+            ],
+            resources: []
+          }),
+          parsedContent: {
+            title: "Unexpected Error",
+            summary: "An unexpected error occurred while processing your research query.",
+            details: "Our system encountered an error that it wasn't expecting. This has been logged for investigation.",
+            actionableSteps: [
+              "Try again later",
+              "Refresh the page and submit your query again",
+              "If the problem persists, please contact support"
             ],
             resources: []
           }
