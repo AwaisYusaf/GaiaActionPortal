@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "buildCommand": "next build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
@@ -9,6 +9,12 @@
     "PERPLEXITY_API_KEY": "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"
   },
   "functions": {
+    "src/app/api/perplexity/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/perplexity/gaia-rewrite/route.ts": {
+      "maxDuration": 300
+    },
     "src/app/api/**/*": {
       "maxDuration": 120
     }

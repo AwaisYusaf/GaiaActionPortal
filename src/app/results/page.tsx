@@ -67,6 +67,30 @@ export default function ResultsPage() {
           data = JSON.parse(responseText);
         } catch (parseError) {
           console.error('Failed to parse API response as JSON:', responseText);
+          
+          // Check if this is a timeout error from Vercel
+          if (responseText.includes('FUNCTION_INVOCATION_TIMEOUT') || responseText.includes('timed out')) {
+            // Create a fallback response for timeout errors
+            setResult({
+              title: "Research Request Timed Out",
+              summary: "Your environmental research query is taking longer than expected to process.",
+              details: "The research service reached a timeout limit. This usually happens with very complex queries or during high traffic periods. We apologize for the inconvenience.",
+              actionableSteps: [
+                "Try again with a more specific query",
+                "Break your question into smaller, more focused questions",
+                "Try again later when the service might be less busy"
+              ],
+              resources: [
+                "Environmental Protection Agency (EPA) - https://www.epa.gov",
+                "National Oceanic and Atmospheric Administration (NOAA) - https://www.noaa.gov",
+                "United Nations Environment Programme - https://www.unep.org"
+              ]
+            });
+            setLoading(false);
+            setError("Your request timed out. We've provided some general information, but you may want to try a more specific query.");
+            return;
+          }
+          
           throw new Error(`Invalid JSON response from API: ${responseText.substring(0, 100)}...`);
         }
         
@@ -139,7 +163,7 @@ export default function ResultsPage() {
           setResult(parsedContent);
         } catch (parseError) {
           console.error('Error parsing JSON response:', parseError);
-          throw new Error('Failed to parse the response from the API. Check the console for details.');
+          setError('Failed to parse the response from the API. Check the console for details.');
         }
       } catch (err) {
         console.error('Error fetching results:', err);
