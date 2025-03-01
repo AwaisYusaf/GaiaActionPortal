@@ -293,7 +293,7 @@ CRITICAL INSTRUCTIONS:
         lastError = error;
         
         // If it's an abort error (timeout), don't retry
-        if (error.name === 'AbortError') {
+        if (error instanceof Error && error.name === 'AbortError') {
           console.error('Request timed out');
           clearTimeout(timeoutId);
           
@@ -343,7 +343,7 @@ CRITICAL INSTRUCTIONS:
     console.error('All retry attempts failed');
     return NextResponse.json({ 
       error: 'All API request attempts failed',
-      errorDetails: lastError ? lastError.message : 'Unknown error',
+      errorDetails: lastError instanceof Error ? lastError.message : 'Unknown error',
       choices: [{
         message: {
           content: JSON.stringify({
