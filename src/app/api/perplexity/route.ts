@@ -215,6 +215,9 @@ CRITICAL INSTRUCTIONS:
             const rewriteController = new AbortController();
             const rewriteTimeoutId = setTimeout(() => rewriteController.abort(), 30000); // 30 second timeout
             
+            // Get the parsed content from the data structure
+            const parsedContent = data.choices[0].message.parsedContent || data.choices[0].message.content;
+            
             const rewriteResponse = await fetch(rewriteUrl, {
               method: 'POST',
               headers: {
