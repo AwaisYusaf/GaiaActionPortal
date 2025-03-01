@@ -7,5 +7,21 @@
   "outputDirectory": ".next",
   "env": {
     "PERPLEXITY_API_KEY": "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"
-  }
+  },
+  "functions": {
+    "src/app/api/**/*": {
+      "maxDuration": 120
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    }
+  ]
 }

@@ -65,9 +65,10 @@ CRITICAL INSTRUCTIONS:
     
     console.log('Request body:', JSON.stringify(requestBody));
     
-    // Create an AbortController with a timeout
+    // Create an AbortController for the fetch request
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout for deep research
+    // Set a timeout of 90 seconds (increased from 60 seconds)
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
     
     try {
       // Call the Perplexity API
@@ -213,7 +214,7 @@ CRITICAL INSTRUCTIONS:
             
             // Create an AbortController with a timeout for the rewrite request
             const rewriteController = new AbortController();
-            const rewriteTimeoutId = setTimeout(() => rewriteController.abort(), 30000); // 30 second timeout
+            const rewriteTimeoutId = setTimeout(() => rewriteController.abort(), 45000); // 45 second timeout
             
             // Get the parsed content from the data structure
             const parsedContent = data.choices[0].message.parsedContent || data.choices[0].message.content;

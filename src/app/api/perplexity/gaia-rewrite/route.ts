@@ -96,9 +96,9 @@ The response must be valid JSON that can be parsed with JSON.parse().
       
       console.log('Calling Perplexity Sonar API');
       
-      // Create an AbortController with a timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      // Create an AbortController with a timeout for the rewrite request
+      const rewriteController = new AbortController();
+      const rewriteTimeoutId = setTimeout(() => rewriteController.abort(), 45000); // 45 second timeout (increased from 30)
       
       const response = await fetch('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
@@ -107,11 +107,11 @@ The response must be valid JSON that can be parsed with JSON.parse().
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify(requestBody),
-        signal: controller.signal
+        signal: rewriteController.signal
       });
       
       // Clear the timeout
-      clearTimeout(timeoutId);
+      clearTimeout(rewriteTimeoutId);
       
       if (!response.ok) {
         const errorText = await response.text();
