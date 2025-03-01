@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:3001": "next dev -p 3001",
+    "prebuild": "npx update-browserslist-db@latest",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

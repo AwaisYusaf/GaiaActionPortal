@@ -2,7 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const { query, followUpQuestions } = await req.json();
+    console.log('Perplexity API route called');
+    
+    const { query, followUpQuestions, _simulateTimeout } = await req.json();
+    
+    // For testing: simulate a timeout if the special flag is set
+    if (_simulateTimeout) {
+      console.log('Simulating a timeout for testing purposes');
+      const error = new Error('AbortError');
+      error.name = 'AbortError';
+      throw error;
+    }
+    
+    if (!query) {
+      return NextResponse.json({ error: 'Missing query parameter' }, { status: 400 });
+    }
     
     const apiKey = process.env.PERPLEXITY_API_KEY || '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';
     
@@ -277,11 +291,11 @@ CRITICAL INSTRUCTIONS:
       }
       
       return NextResponse.json(data);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error in Perplexity API route:', error);
       
       // Check if it's an AbortError (timeout)
-      const isTimeout = error.name === 'AbortError';
+      const isTimeout = error instanceof Error && error.name === 'AbortError';
       const errorMessage = isTimeout ? 'Request timed out' : 'Error processing request';
       
       return NextResponse.json({ 
@@ -318,11 +332,36 @@ CRITICAL INSTRUCTIONS:
         }]
       }, { status: 500 });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error processing request:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', message: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'An unknown error occurred while processing your request',
+      choices: [{
+        message: {
+          content: JSON.stringify({
+            title: "Error Processing Research Request",
+            summary: "We encountered an issue while processing your request.",
+            details: "An unexpected error occurred while processing your request. Our team has been notified.",
+            actionableSteps: [
+              "Try again with a more specific query",
+              "Try again later when the service might be less busy"
+            ],
+            resources: []
+          }),
+          parsedContent: {
+            title: "Error Processing Research Request",
+            summary: "We encountered an issue while processing your request.",
+            details: "An unexpected error occurred while processing your request. Our team has been notified.",
+            actionableSteps: [
+              "Try again with a more specific query",
+              "Try again later when the service might be less busy"
+            ],
+            resources: []
+          }
+        }
+      }]
+    }, { status: 500 });
   }
 }

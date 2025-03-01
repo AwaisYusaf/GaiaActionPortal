@@ -167,11 +167,11 @@ The response must be valid JSON that can be parsed with JSON.parse().
           error: 'Unexpected Sonar API response structure' 
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error calling Perplexity Sonar API:', error);
       
       // Check if it's an AbortError (timeout)
-      const isTimeout = error.name === 'AbortError';
+      const isTimeout = error instanceof Error && error.name === 'AbortError';
       console.log(isTimeout ? 'Request timed out' : 'Error processing request');
       
       return NextResponse.json({ 
@@ -179,12 +179,13 @@ The response must be valid JSON that can be parsed with JSON.parse().
         error: isTimeout ? 'Perplexity Sonar API request timed out' : 'Error calling Perplexity Sonar API'
       });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in Gaia rewrite endpoint:', error);
-    // In case of a critical error, return a valid JSON response
+    // In case of a critical error, return a valid JSON response with the original content if available
     return NextResponse.json({ 
       error: 'Internal server error in Gaia rewrite endpoint',
-      content: '{"title":"Error","summary":"An error occurred while processing your request.","details":"The system encountered an error while trying to process your request. Please try again.","actionableSteps":["Try your query again","If the problem persists, try a different query"]}'
+      message: error instanceof Error ? error.message : 'Unknown error',
+      content: typeof content === 'string' ? content : '{"title":"Error","summary":"An error occurred while processing your request.","details":"The system encountered an error while trying to process your request. Please try again.","actionableSteps":["Try your query again","If the problem persists, try a different query"]}'
     }, { status: 500 });
   }
 }
