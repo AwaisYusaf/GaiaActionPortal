@@ -4,7 +4,13 @@ export async function POST(req: NextRequest) {
   try {
     const { query } = await req.json();
     
-    const apiKey = process.env.PERPLEXITY_API_KEY || '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';
+    const apiKey = process.env.PERPLEXITY_API_KEY;
+    
+    if (!apiKey) {
+      console.error('No Perplexity API key found in environment variables');
+      // For topic check, we'll fail open and assume it's an environmental topic
+      return NextResponse.json({ isEnvironmentalTopic: true });
+    }
     
     console.log('Sending topic check request to Perplexity API with query:', query);
     

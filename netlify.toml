@@ -1,0 +1,34 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NEXT_PUBLIC_SITE_URL = "https://gaia-action-portal.netlify.app"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["src/lib/data/**"]
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Increase function timeout for API routes
+[functions."api/perplexity"]
+  included_files = []
+  external_node_modules = []
+  node_bundler = "esbuild"
+  timeout = 120
+
+[functions."api/perplexity/gaia-rewrite"]
+  included_files = []
+  external_node_modules = []
+  node_bundler = "esbuild"
+  timeout = 120
+
+# Add headers to enable CORS
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"

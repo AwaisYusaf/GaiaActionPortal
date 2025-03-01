@@ -18,7 +18,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing query parameter' }, { status: 400 });
     }
     
-    const apiKey = process.env.PERPLEXITY_API_KEY || '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';
+    // Use environment variable for API key with fallback
+    const apiKey = process.env.PERPLEXITY_API_KEY;
+    
+    if (!apiKey) {
+      console.error('No Perplexity API key found in environment variables');
+      return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
+    }
     
     // Construct the prompt with follow-up questions if available
     let fullQuery = query;
@@ -76,7 +82,7 @@ CRITICAL INSTRUCTIONS:
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify(requestBody),
         signal: controller.signal

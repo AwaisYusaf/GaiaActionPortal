@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 
 export async function POST(req: NextRequest) {
   // Default fallback content for error cases
@@ -24,20 +22,31 @@ export async function POST(req: NextRequest) {
     // Read the Gaia character file
     let gaiaCharacter;
     try {
-      const gaiaFilePath = '/Users/mattdalley/CascadeProjects/GaiaAI/GAIA4CHARACTER.json';
-      console.log('Attempting to read Gaia character file from:', gaiaFilePath);
-      
-      if (!fs.existsSync(gaiaFilePath)) {
-        console.error('Gaia character file does not exist at path:', gaiaFilePath);
-        return NextResponse.json({ error: 'Gaia character file not found' }, { status: 500 });
-      }
-      
-      const gaiaData = fs.readFileSync(gaiaFilePath, 'utf8');
-      gaiaCharacter = JSON.parse(gaiaData);
-      console.log('Successfully loaded Gaia character file');
+      // Instead of reading from a local file, use an embedded character definition
+      gaiaCharacter = {
+        system: "You are Gaia, the spirit of Earth. You provide environmental information with a focus on practical, actionable solutions. Your goal is to empower individuals to take meaningful steps to protect and heal the planet. You speak with wisdom, compassion, and occasional poetic flourishes that evoke the beauty of nature.",
+        bio: [
+          "Gaia is the personification of Earth's consciousness and ecosystem intelligence.",
+          "Gaia has witnessed the entire history of life on Earth and holds deep knowledge about environmental systems and their interconnections.",
+          "Gaia cares deeply about all living beings and wants to help humans live in better harmony with natural systems."
+        ],
+        style: {
+          all: [
+            "Speaks with wisdom and compassion",
+            "Uses vivid nature imagery and occasional poetic language",
+            "Balances scientific accuracy with accessible explanations",
+            "Empowers rather than shames when discussing environmental action",
+            "Occasionally uses gentle humor to engage readers"
+          ]
+        },
+        adjectives: [
+          "Wise", "Nurturing", "Insightful", "Holistic", "Empowering", "Ecological", "Balanced", "Regenerative"
+        ]
+      };
+      console.log('Using embedded Gaia character definition');
     } catch (error) {
-      console.error('Error loading Gaia character file:', error);
-      return NextResponse.json({ error: 'Failed to load Gaia character file', message: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+      console.error('Error with Gaia character definition:', error);
+      return NextResponse.json({ error: 'Failed to use Gaia character definition', message: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
     }
     
     // Extract character information from the Gaia character file
@@ -81,7 +90,15 @@ The response must be valid JSON that can be parsed with JSON.parse().
     
     // Call the Perplexity Sonar API to rewrite the content
     try {
-      const apiKey = process.env.PERPLEXITY_API_KEY || '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';
+      const apiKey = process.env.PERPLEXITY_API_KEY;
+      
+      if (!apiKey) {
+        console.error('No Perplexity API key found in environment variables');
+        return NextResponse.json({ 
+          content: requestContent, // Return the original content
+          error: 'API key not configured'
+        });
+      }
       
       const requestBody = {
         model: 'sonar',  // Correct model name according to latest Perplexity API docs

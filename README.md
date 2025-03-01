@@ -11,7 +11,21 @@ An AI-powered platform for environmental sustainability research and guidance.
 
 ## Deployment
 
-This application is deployed on Vercel with custom configuration for optimal performance.
+This application is deployed on Netlify with custom configuration for optimal performance.
+
+### Netlify Deployment Instructions
+
+1. Push your code to GitHub
+2. Connect your GitHub repository to Netlify
+3. Set the following build settings:
+   - Build command: `npm run build`
+   - Publish directory: `.next`
+4. Add the following environment variable in Netlify's dashboard:
+   - Key: `PERPLEXITY_API_KEY`
+   - Value: Your Perplexity API key
+5. Deploy the site
+
+The application includes a `netlify.toml` file with the necessary configuration for API routes, including increased function timeouts for the Perplexity API calls.
 
 Last deployment: March 1, 2025
 
