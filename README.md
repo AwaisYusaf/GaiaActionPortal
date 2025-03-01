@@ -1,19 +1,23 @@
 # Gaia Action Environmental Research Portal
 
-![Gaia Action Portal](https://i.imgur.com/8JXdBsL.png)
+An AI-powered platform for environmental sustainability research and guidance.
+
+## Features
+
+- AI-powered environmental research using Perplexity API
+- Personalized environmental action recommendations
+- User-friendly interface with responsive design
+- Robust error handling and timeout management
+
+## Deployment
+
+This application is deployed on Vercel with custom configuration for optimal performance.
+
+Last deployment: March 1, 2025
 
 ## Overview
 
 Gaia Action Portal is an AI-powered web application designed to help individuals and small groups explore and address environmental challenges through deep, actionable research. The portal leverages the Perplexity AI API to provide comprehensive, well-researched information on environmental topics with a focus on practical, individual-level actions.
-
-## Features
-
-- **AI-Powered Environmental Research**: Get deep insights on environmental topics using the Perplexity AI API
-- **Action-Oriented Results**: Focus on what individuals and small groups can do to make a positive impact
-- **Mobile-Responsive Design**: Optimized for both desktop and mobile devices
-- **Search History**: Track and revisit previous research queries
-- **Resource Links**: Direct access to recommended resources for further learning and action
-- **Copy Functionality**: Easily copy research results for sharing or reference
 
 ## Technology Stack
 
