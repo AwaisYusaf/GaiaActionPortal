@@ -297,36 +297,28 @@ CRITICAL INSTRUCTIONS:
     } catch (error: unknown) {
       console.error('Error in Perplexity API route:', error);
       
-      // Check if it's an AbortError (timeout)
-      const isTimeout = error instanceof Error && error.name === 'AbortError';
-      const errorMessage = isTimeout ? 'Request timed out' : 'Error processing request';
-      
+      // Ensure we always return a valid JSON response
       return NextResponse.json({ 
-        error: errorMessage,
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'An unknown error occurred while processing your request',
         choices: [{
           message: {
             content: JSON.stringify({
-              title: isTimeout ? "Research Request Timed Out" : "Error Processing Research Request",
-              summary: isTimeout ? "Your research request took too long to process." : "We encountered an issue while processing your request.",
-              details: isTimeout ? 
-                "The research service reached a timeout limit. This usually happens with very complex queries or during high traffic periods." : 
-                "An unexpected error occurred while processing your request. Our team has been notified.",
+              title: "Error Processing Research Request",
+              summary: "We encountered an issue while processing your request.",
+              details: "An unexpected error occurred while processing your request. Our team has been notified.",
               actionableSteps: [
                 "Try again with a more specific query",
-                "Break your question into smaller, more focused questions",
                 "Try again later when the service might be less busy"
               ],
               resources: []
             }),
             parsedContent: {
-              title: isTimeout ? "Research Request Timed Out" : "Error Processing Research Request",
-              summary: isTimeout ? "Your research request took too long to process." : "We encountered an issue while processing your request.",
-              details: isTimeout ? 
-                "The research service reached a timeout limit. This usually happens with very complex queries or during high traffic periods." : 
-                "An unexpected error occurred while processing your request. Our team has been notified.",
+              title: "Error Processing Research Request",
+              summary: "We encountered an issue while processing your request.",
+              details: "An unexpected error occurred while processing your request. Our team has been notified.",
               actionableSteps: [
                 "Try again with a more specific query",
-                "Break your question into smaller, more focused questions",
                 "Try again later when the service might be less busy"
               ],
               resources: []
@@ -338,6 +330,7 @@ CRITICAL INSTRUCTIONS:
   } catch (error: unknown) {
     console.error('Error processing request:', error);
     
+    // Ensure we always return a valid JSON response
     return NextResponse.json({ 
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'An unknown error occurred while processing your request',

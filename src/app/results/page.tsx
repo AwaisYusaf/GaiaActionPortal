@@ -57,8 +57,18 @@ export default function ResultsPage() {
             followUpQuestions: [],
           }),
         });
-
-        const data = await response.json();
+        
+        // First try to get the response text
+        const responseText = await response.text();
+        
+        // Try to parse it as JSON
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Failed to parse API response as JSON:', responseText);
+          throw new Error(`Invalid JSON response from API: ${responseText.substring(0, 100)}...`);
+        }
         
         if (!response.ok) {
           console.error('API error:', data);
