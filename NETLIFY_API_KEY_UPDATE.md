@@ -20,7 +20,7 @@ Follow these steps to update your Perplexity API key in the Netlify environment:
    - Click "Edit" next to it
    - Replace the current value with your new API key:
      ```
-     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
+     YOUR_NEW_API_KEY_HERE
      ```
    - Click "Save"
 

@@ -4,7 +4,16 @@ export async function POST(req: NextRequest) {
   try {
     const { query, context } = await req.json();
     
-    const apiKey = process.env.PERPLEXITY_API_KEY || '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';
+    // Use environment variable for API key
+    const apiKey = process.env.PERPLEXITY_API_KEY;
+    
+    if (!apiKey) {
+      console.error('No Perplexity API key found in environment variables');
+      return NextResponse.json({ 
+        error: 'API key not configured',
+        details: 'The PERPLEXITY_API_KEY environment variable is not set in the server environment.'
+      }, { status: 500 });
+    }
     
     console.log('Sending request to Perplexity API (fast model) with query:', query);
     
