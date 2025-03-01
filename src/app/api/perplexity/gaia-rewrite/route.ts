@@ -3,10 +3,16 @@ import fs from 'fs';
 import path from 'path';
 
 export async function POST(req: NextRequest) {
+  // Default fallback content for error cases
+  const fallbackContent = '{"title":"Error","summary":"An error occurred while processing your request.","details":"The system encountered an error while trying to process your request. Please try again.","actionableSteps":["Try your query again","If the problem persists, try a different query"]}';
+
+  let requestContent = '';
+
   try {
     console.log('Gaia rewrite endpoint called');
     
     const { content } = await req.json();
+    requestContent = content;
     
     if (!content) {
       console.error('No content provided to Gaia rewrite endpoint');
@@ -113,7 +119,7 @@ The response must be valid JSON that can be parsed with JSON.parse().
         return NextResponse.json({ 
           error: 'Error from Perplexity Sonar API', 
           message: errorText, 
-          content 
+          content: requestContent
         }, { status: response.status });
       }
       
@@ -156,14 +162,14 @@ The response must be valid JSON that can be parsed with JSON.parse().
           
           // Return the original content if we can't parse the rewritten content
           return NextResponse.json({ 
-            content, 
+            content: requestContent, 
             error: 'Failed to parse rewritten content as JSON'
           });
         }
       } else {
         console.error('Unexpected Sonar API response structure:', data);
         return NextResponse.json({ 
-          content, 
+          content: requestContent, 
           error: 'Unexpected Sonar API response structure' 
         });
       }
@@ -175,7 +181,7 @@ The response must be valid JSON that can be parsed with JSON.parse().
       console.log(isTimeout ? 'Request timed out' : 'Error processing request');
       
       return NextResponse.json({ 
-        content, // Return the original content which should be valid JSON
+        content: requestContent, // Return the original content which should be valid JSON
         error: isTimeout ? 'Perplexity Sonar API request timed out' : 'Error calling Perplexity Sonar API'
       });
     }
@@ -185,7 +191,7 @@ The response must be valid JSON that can be parsed with JSON.parse().
     return NextResponse.json({ 
       error: 'Internal server error in Gaia rewrite endpoint',
       message: error instanceof Error ? error.message : 'Unknown error',
-      content: typeof content === 'string' ? content : '{"title":"Error","summary":"An error occurred while processing your request.","details":"The system encountered an error while trying to process your request. Please try again.","actionableSteps":["Try your query again","If the problem persists, try a different query"]}'
+      content: requestContent || fallbackContent
     }, { status: 500 });
   }
 }
